@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공지사항</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;overflow:hidden;width:100vw;height:100vh;font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;position:relative}
+
+/* PAGE 1: 가짜 공문 */
+#page1{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;background:#f4f1e8;transition:opacity .6s ease;padding:20px}
+#page1.hidden{opacity:0;pointer-events:none}
+.paper{background:#fff;max-width:480px;width:100%;padding:40px 36px;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.25);position:relative}
+.stamp{position:absolute;top:20px;right:24px;color:#c0392b;border:3px solid #c0392b;padding:4px 10px;border-radius:6px;font-weight:700;font-size:.8em;transform:rotate(12deg);opacity:.85}
+.paper h2{color:#222;font-size:1.3em;margin-bottom:6px;letter-spacing:1px}
+.paper .sub{color:#888;font-size:.85em;margin-bottom:24px}
+.paper p{color:#333;line-height:1.7;font-size:.95em;margin-bottom:14px}
+.paper .field{border-bottom:1px dashed #999;padding:8px 0;margin-bottom:18px;color:#555;font-size:.85em}
+.btn-row{display:flex;gap:16px;margin-top:28px;position:relative;height:60px}
+.btn{padding:14px 30px;font-size:1em;border:none;border-radius:6px;cursor:pointer;font-weight:600;letter-spacing:.3px;transition:transform .2s}
+.btn-agree{background:#c0392b;color:#fff;position:absolute;left:0;top:0}
+.btn-agree:hover{transform:scale(1.05)}
+.btn-refuse{background:#eee;color:#444;position:absolute;right:0;top:0}
+.hint{color:#aaa;font-size:.75em;margin-top:10px;text-align:center}
+
+/* PAGE 2: 리액션 */
+#page2{position:fixed;top:0;left:0;width:100%;height:100%;display:none;z-index:50}
+#page2.show{display:block}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%}
+
+/* 메시지 */
+#msgBox{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;background:rgba(8,8,15,.92)}
+#msgBox.show{display:flex}
+.msg{color:#fff;font-size:1.7em;text-align:center;line-height:1.7;animation:msgIn .8s ease;padding:0 20px}
+.msg small{display:block;font-size:.5em;color:#aaa;margin-top:16px;font-weight:400}
+@keyframes msgIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div id="page1">
+  <div class="paper">
+    <div class="stamp">긴급</div>
+    <h2>📄 우정 관계 해지 신청서</h2>
+    <div class="sub">문서번호 25-FR-0701 · 발신: 시스템</div>
+    <p>아래 사용자와의 친구 관계를 지속할지 여부를 확인해주세요.</p>
+    <div class="field">대상자: <b>본인</b> &nbsp; 관계 등급: <b>절친</b></div>
+    <p>※ "동의"를 누르면 관계가 즉시 해지되며 되돌릴 수 없습니다.</p>
+    <div class="btn-row">
+      <button class="btn btn-agree" id="agreeBtn">동의합니다</button>
+      <button class="btn btn-refuse" id="refuseBtn">거부합니다</button>
+    </div>
+    <div class="hint">신중하게 선택해주세요</div>
+  </div>
+</div>
+
+<div id="page2"><canvas id="cv"></canvas></div>
+
+<div id="msgBox">
+  <div class="msg" id="msgText"></div>
+</div>
+
+<script>
+const agreeBtn = document.getElementById('agreeBtn');
+const refuseBtn = document.getElementById('refuseBtn');
+const btnRow = document.querySelector('.btn-row');
+let dodges = 0;
+const dodgeLines = ['어어 잠깐','안돼 못 눌러','진짜 누를거야?','마지막 기회','...진심?'];
+
+function dodgeAgree(){
+  const maxX = btnRow.clientWidth - agreeBtn.clientWidth;
+  const maxY = btnRow.clientHeight - agreeBtn.clientHeight + 10;
+  const nx = Math.random()*maxX;
+  const ny = (Math.random()-0.5)*40;
+  agreeBtn.style.left = nx+'px';
+  agreeBtn.style.top = ny+'px';
+  agreeBtn.textContent = dodges < dodgeLines.length ? dodgeLines[dodges] : '못잡지ㅋㅋ';
+  dodges++;
+}
+agreeBtn.addEventListener('mouseenter', dodgeAgree);
+agreeBtn.addEventListener('touchstart', (e)=>{e.preventDefault(); dodgeAgree();});
+agreeBtn.addEventListener('click', (e)=>{e.preventDefault(); dodgeAgree();});
+
+refuseBtn.addEventListener('click', ()=>{
+  document.getElementById('page1').classList.add('hidden');
+  setTimeout(()=>{
+    document.getElementById('page2').classList.add('show');
+    startConfetti();
+    setTimeout(showMsg, 1600);
+  }, 500);
+});
+
+function showMsg(){
+  document.getElementById('msgText').innerHTML = '장난이야 ㅋㅋㅋㅋ 놀랐지<br>💛<small>야르렁</small>';
+  document.getElementById('msgBox').classList.add('show');
+}
+
+/* 컨페티 캔버스 */
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize(); addEventListener('resize',resize);
+const TAU=Math.PI*2;
+const colors=['#ffd166','#ef476f','#06d6a0','#118ab2','#f78c6b'];
+class Piece{
+  constructor(){
+    this.x=Math.random()*W; this.y=-20-Math.random()*H*0.3;
+    this.vx=(Math.random()-.5)*3; this.vy=2+Math.random()*3;
+    this.sz=6+Math.random()*6; this.col=colors[~~(Math.random()*colors.length)];
+    this.r=Math.random()*TAU; this.rs=(Math.random()-.5)*.2;
+  }
+  update(){this.x+=this.vx;this.y+=this.vy;this.vy+=0.02;this.r+=this.rs;}
+  draw(){ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.r);ctx.fillStyle=this.col;ctx.fillRect(-this.sz/2,-this.sz/4,this.sz,this.sz/2);ctx.restore();}
+}
+let pieces=[];
+let running=false;
+function startConfetti(){
+  running=true;
+  for(let i=0;i<160;i++) pieces.push(new Piece());
+  requestAnimationFrame(loop);
+}
+function loop(){
+  if(!running) return;
+  ctx.fillStyle='#0a0a0f'; ctx.fillRect(0,0,W,H);
+  pieces.forEach(p=>{p.update();p.draw();});
+  pieces = pieces.filter(p=>p.y < H+30);
+  if(Math.random()>0.93 && pieces.length<300) pieces.push(new Piece());
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
