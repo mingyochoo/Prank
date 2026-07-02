@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이트 신청권</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(160deg,#ffe3ec,#ffc9dd);overflow:hidden;width:100vw;height:100vh;font-family:'Nanum Gothic',sans-serif;display:flex;align-items:center;justify-content:center;position:relative}
+#page1{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .5s;z-index:10}
+#page1.hidden{opacity:0;pointer-events:none}
+.ticket{background:#fff;width:340px;max-width:90vw;border-radius:20px;box-shadow:0 20px 50px rgba(122,34,69,.2);position:relative;overflow:hidden}
+.ticket-top{padding:32px 28px 20px;text-align:center}
+.ticket-top .kicker{color:#e0559a;font-size:.8em;font-weight:800;letter-spacing:3px;margin-bottom:10px}
+.ticket-top h1{color:#7a2245;font-size:1.7em;font-weight:800;line-height:1.4;margin-bottom:10px}
+.ticket-top .desc{color:#a06;font-size:.9em;font-weight:700;line-height:1.6}
+.perforation{position:relative;height:0}
+.perforation::before{content:'';position:absolute;left:-14px;top:-14px;width:28px;height:28px;background:#ffd6e5;border-radius:50%}
+.perforation::after{content:'';position:absolute;right:-14px;top:-14px;width:28px;height:28px;background:#ffd6e5;border-radius:50%}
+.dashed{border-top:2px dashed #f3b8cf;margin:0 20px}
+.ticket-bottom{padding:22px 28px 30px;text-align:center}
+.ticket-bottom .field{display:flex;justify-content:space-between;color:#7a2245;font-size:.9em;font-weight:700;margin-bottom:8px}
+.ticket-bottom .field span:last-child{color:#a06}
+#timer{font-variant-numeric:tabular-nums;color:#e0559a!important;font-weight:900}
+#timer.urgent{animation:pulseTimer .6s infinite}
+@keyframes pulseTimer{0%,100%{opacity:1}50%{opacity:.4}}
+.dodge-zone{position:relative;height:56px;margin-top:20px}
+.btn{position:absolute;top:0;width:118px;height:52px;font-size:.9em;border:none;border-radius:12px;cursor:pointer;font-weight:900;transition:transform .15s;box-shadow:0 4px 10px rgba(0,0,0,.12);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;justify-content:center}
+.btn:active{transform:scale(.96)}
+.btn-accept{background:#e0559a;color:#fff;left:0}
+.btn-refuse{background:#f7e8ee;color:#7a2245;right:0;left:auto}
+.emoji{position:fixed;font-size:1.6em;pointer-events:none;z-index:60;user-select:none}
+#page2{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10}
+#page2.show{display:flex}
+.msg{color:#7a2245;font-size:1.9em;font-weight:800;line-height:1.7;animation:msgIn .6s cubic-bezier(.34,1.56,.64,1)}
+.msg small{display:block;font-size:.48em;color:#a05070;margin-top:18px;font-weight:600}
+@keyframes msgIn{from{opacity:0;transform:scale(.6) rotate(-6deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+canvas{position:fixed;top:0;left:0;pointer-events:none;z-index:1}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="page1">
+<div class="ticket">
+<div class="ticket-top">
+<div class="kicker">DATE COUPON</div>
+<h1>데이트 신청권</h1>
+<div class="desc">수락하든 거부하든<br>답은 정해져있습니다.</div>
+</div>
+<div class="perforation"></div>
+<div class="dashed"></div>
+<div class="ticket-bottom">
+<div class="field"><span>신청인</span><span>민교</span></div>
+<div class="field"><span>대상</span><span>현진이</span></div>
+<div class="field"><span>유효기간</span><span id="timer">05:00</span></div>
+<div class="dodge-zone">
+<button class="btn btn-accept" id="acceptBtn">수락권</button>
+<button class="btn btn-refuse" id="refuseBtn">거부권</button>
+</div>
+</div>
+</div>
+</div>
+<div id="page2">
+<div class="msg">데이트 확정!<br>🎫<small>보고싶당</small></div>
+</div>
+<script>
+/* 카운트다운 타이머 - 아래 숫자만 바꾸면 시간 조절 가능 (초 단위) */
+let secondsLeft = 1 * 60;
+const timerEl = document.getElementById('timer');
+function updateTimer(){
+  const m = Math.floor(secondsLeft/60);
+  const s = secondsLeft%60;
+  timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  if(secondsLeft <= 30) timerEl.classList.add('urgent');
+  if(secondsLeft > 0) secondsLeft--;
+}
+updateTimer();
+setInterval(updateTimer, 1000);
+
+const acceptBtn = document.getElementById('acceptBtn');
+const refuseBtn = document.getElementById('refuseBtn');
+const dodgeZone = document.querySelector('.dodge-zone');
+let dodges = 0;
+const dodgeLines = ['어허','이걸왜','응안돼','절대','안돼'];
+function dodgeRefuse(){
+const minX = acceptBtn.offsetWidth + 14;
+const maxX = dodgeZone.clientWidth - refuseBtn.offsetWidth;
+const nx = minX + Math.random()*Math.max(0, maxX-minX);
+const ny = (Math.random()-0.5)*16;
+refuseBtn.style.left = nx+'px';
+refuseBtn.style.top = ny+'px';
+refuseBtn.textContent = dodges < dodgeLines.length ? dodgeLines[dodges] : '포기해';
+dodges++;
+spawnEmoji(refuseBtn);
+}
+function spawnEmoji(el){
+const rect = el.getBoundingClientRect();
+const emojis = ['😱','🤯','🤬','👿'];
+const e = document.createElement('div');
+e.className='emoji';
+e.textContent = emojis[~~(Math.random()*emojis.length)];
+e.style.left = rect.left+'px';
+e.style.top = rect.top+'px';
+document.body.appendChild(e);
+let t=0;
+const fy = -30 - Math.random()*30;
+const anim = setInterval(()=>{
+t+=1;
+e.style.transform = `translateY(${t*fy/20}px)`;
+e.style.opacity = 1-t/20;
+if(t>=20){clearInterval(anim); e.remove();}
+  },20);
+}
+refuseBtn.addEventListener('mouseenter', dodgeRefuse);
+refuseBtn.addEventListener('touchstart', (e)=>{e.preventDefault(); dodgeRefuse();});
+refuseBtn.addEventListener('click', (e)=>{e.preventDefault(); dodgeRefuse();});
+acceptBtn.addEventListener('click', ()=>{
+document.getElementById('page1').classList.add('hidden');
+setTimeout(()=>{
+document.getElementById('page2').classList.add('show');
+burst();
+  }, 400);
+});
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
+resize(); addEventListener('resize',resize);
+const TAU = Math.PI*2;
+const emojiSet = ['💕','💗','😍','⭐','🎫','💌'];
+class Piece{
+constructor(){
+this.x = innerWidth/2 + (Math.random()-0.5)*60;
+this.y = innerHeight/2 + (Math.random()-0.5)*60;
+const a = Math.random()*TAU, s = 2+Math.random()*5;
+this.vx = Math.cos(a)*s; this.vy = Math.sin(a)*s - 2;
+this.sz = 16 + Math.random()*16;
+this.emoji = emojiSet[~~(Math.random()*emojiSet.length)];
+this.life = 1;
+  }
+update(){this.x+=this.vx; this.y+=this.vy; this.vy+=0.03; this.life-=0.01;}
+draw(){
+ctx.save();
+ctx.globalAlpha = Math.max(0,this.life);
+ctx.translate(this.x,this.y);
+ctx.font = this.sz+'px sans-serif';
+ctx.textAlign='center'; ctx.textBaseline='middle';
+ctx.fillText(this.emoji,0,0);
+ctx.restore();
+  }
+}
+let pieces=[];
+function burst(){
+for(let i=0;i<50;i++) pieces.push(new Piece());
+loop();
+}
+function loop(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+pieces.forEach(p=>{p.update();p.draw();});
+pieces = pieces.filter(p=>p.life>0);
+if(pieces.length>0) requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
